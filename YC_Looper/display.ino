@@ -1,3 +1,8 @@
+/*
+ * display.ino - Display update methods and drawing helpers
+ * Author: Tom Hightower - May 9, 2022
+ */
+
 void update_display() {
   display.clearDisplay();
   if (freshStart) {

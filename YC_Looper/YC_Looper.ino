@@ -170,24 +170,24 @@ Page TimeSigPage;
 
 Page *EditBackPage = &MainPage1;
 
-MenuItem main_setup  = {"Setup",         &SetupPage1,   ValueType::NoValue, 0};
-MenuItem main_mixing = {"Mixing",        &MixingPage1,  ValueType::NoValue, 0};
-MenuItem main_load   = {"Load",          &LoadListPage, ValueType::NoValue, 0};
-MenuItem main_save   = {"Save As",       &SaveAsPage,   ValueType::NoValue, 0};
-MenuItem main_clear  = {"Clear Session", &ConfirmPage,  ValueType::NoValue, 0};
+MenuItem main_setup;
+MenuItem main_mixing;
+MenuItem main_load;
+MenuItem main_save;      
+MenuItem main_clear;      
 
-MenuItem setup_tempo     = {"Tempo",       &NumericPage, ValueType::Tempo,     180};
-MenuItem setup_timeSig   = {"Time Sig",    &TimeSigPage, ValueType::TimeSig,   0};
-MenuItem setup_metronome = {"Metronome",   &TogglePage,  ValueType::Metronome, 0};
-MenuItem setup_loopLen   = {"Loop Length", &NumericPage, ValueType::LoopLen,   32};
+MenuItem setup_tempo;     
+MenuItem setup_timeSig;   
+MenuItem setup_metronome; 
+MenuItem setup_loopLen;
 
-MenuItem mixing_volMain = {"Main Volume", &NumericPage, ValueType::VolMain, 100};
-MenuItem mixing_volA    = {"Ch A Vol",    &NumericPage, ValueType::VolA,    100};
-MenuItem mixing_volB    = {"Ch B Vol",    &NumericPage, ValueType::VolB,    100};
-MenuItem mixing_volC    = {"Ch C Vol",    &NumericPage, ValueType::VolC,    100};
+MenuItem mixing_volMain;  
+MenuItem mixing_volA; 
+MenuItem mixing_volB; 
+MenuItem mixing_volC;     
 
-MenuItem load_load   = {"Load",   &MainPage1,   ValueType::NoValue, 0};
-MenuItem load_delete = {"Delete", &ConfirmPage, ValueType::NoValue, 0};
+MenuItem load_load;    
+MenuItem load_delete;     
 
 uint8_t RE_CLK   = 0;
 uint8_t RE_DT    = 1;
@@ -295,83 +295,10 @@ void update_leds() {
   }
 }
 
-void playFile(LoopChannel channel) {
-  channel.playRaw->play(fileList[channel.id]);
-}
-
 void init_leds() {
   pinMode(LED_CH_A, OUTPUT);
   pinMode(LED_CH_B, OUTPUT);
   pinMode(LED_CH_C, OUTPUT);
   pinMode(LED_PWR,  OUTPUT);
   pinMode(LED_TMPO, OUTPUT);
-}
-
-void init_audio_shield() {
-  // Audio Setup
-  AudioMemory(120);
-  sgtl5000_1.enable();
-  sgtl5000_1.inputSelect(lineInput);
-  sgtl5000_1.volume(VolMain_val / 100);
-  firstBeatWaveform.frequency(880);
-  otherBeatWaveform.frequency(440);
-  firstBeatWaveform.amplitude(0.0);
-  otherBeatWaveform.amplitude(0.0);
-  firstBeatWaveform.begin(WAVEFORM_SINE);
-  otherBeatWaveform.begin(WAVEFORM_SINE);
-
-  // SD Setup
-  SPI.setMOSI(SDCARD_MOSI_PIN);
-  SPI.setSCK(SDCARD_SCK_PIN);
-  if (!(SD.begin(SDCARD_CS_PIN))) {
-    while (1) {
-      Serial.println("Unable to access the SD card");
-      delay(1000);
-    }
-  }
-}
-
-void init_menus() {
-  Channel_A = (struct LoopChannel) {
-    LoopState::Empty, 0, "Channel A", &VolA_val, &LED_CH_A, &playRaw1
-  };
-  Channel_B = (struct LoopChannel) {
-    LoopState::Empty, 1, "Channel B", &VolB_val, &LED_CH_B, &playRaw2
-  };
-  Channel_C = (struct LoopChannel) {
-    LoopState::Empty, 2, "Channel C", &VolC_val, &LED_CH_C, &playRaw3
-  };
-
-  MainPage1      = (struct Page) { {&main_setup, &main_mixing, &main_load}, PageType::Menu, nullptr, nullptr, &MainPage2, SelectionZone::Menu1
-  };
-  MainPage2      = (struct Page) { {&main_save, &main_clear, nullptr}, PageType::Menu, nullptr, &MainPage1, nullptr, SelectionZone::Menu1
-  };
-  SetupPage1     = (struct Page) { {&setup_tempo, &setup_timeSig, &setup_metronome}, PageType::Menu, &MainPage1, nullptr, &SetupPage2, SelectionZone::Menu1
-  };
-  SetupPage2     = (struct Page) { {&setup_loopLen, nullptr, nullptr}, PageType::Menu, &MainPage1, &SetupPage1, nullptr, SelectionZone::Menu1
-  };
-  MixingPage1    = (struct Page) { {&mixing_volMain, &mixing_volA, &mixing_volB}, PageType::Menu, &MainPage1, nullptr, &MixingPage2, SelectionZone::Menu1
-  };
-  MixingPage2    = (struct Page) { {&mixing_volC, nullptr, nullptr}, PageType::Menu, &MainPage1, &MixingPage1, nullptr, SelectionZone::Menu1
-  };
-  LoadListPage   = (struct Page) { {nullptr, nullptr, nullptr},        PageType::DynamicMenu, &MainPage1,    nullptr, nullptr, SelectionZone::Menu1
-  };
-  LoadActionPage = (struct Page) { {&load_load, &load_delete, nullptr}, PageType::Menu,       &LoadListPage, nullptr, nullptr, SelectionZone::Menu1
-  };
-  SaveAsPage     = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValText,    &MainPage1,    nullptr, nullptr, SelectionZone::Save1
-  };
-  ConfirmPage    = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValConfirm,  EditBackPage, nullptr, nullptr, SelectionZone::Confirm
-  };
-  NumericPage    = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValNumeric,  EditBackPage, nullptr, nullptr, SelectionZone::None
-  };
-  TogglePage     = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValToggle,   EditBackPage, nullptr, nullptr, SelectionZone::Confirm
-  };
-  TimeSigPage    = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValTimeSig,  EditBackPage, nullptr, nullptr, SelectionZone::TimeSig1
-  };
-
-  channels[0] = &Channel_A;
-  channels[1] = &Channel_B;
-  channels[2] = &Channel_C;
-  
-  recordingChannel = RecordingChannel::NotRecording;
 }

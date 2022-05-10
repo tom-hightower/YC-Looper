@@ -1,3 +1,7 @@
+/*
+ * controls.ino - Methods for reading the rotary encoder and pushbuttons
+ * Author: Tom Hightower - May 9, 2022
+ */
 
 void check_encoder() {
   long newKnobPos = (long)(knob.read() / 4);

@@ -1,4 +1,8 @@
-
+/*
+ * audio.ino - Methods for recording and playing audio.
+ * Author: Tom Hightower - May 9, 2022
+ */
+ 
 void try_record() {
   for (int i = 0; i < 3; i++) {
     switch(channels[i]->state) {
@@ -16,6 +20,8 @@ void try_record() {
       case Play:
         if (recordingChannel == i+1) {
           stopRecording();
+          channels[i]->playRaw->stop();
+          channels[i]->playRaw->play(fileList[i]);
           recordingChannel = RecordingChannel::NotRecording;
         }
         break;
@@ -54,4 +60,28 @@ void stopRecording() {
     record_queue.freeBuffer();
   }
   record_file.close();
+}
+
+void init_audio_shield() {
+  // Audio Setup
+  AudioMemory(120);
+  sgtl5000_1.enable();
+  sgtl5000_1.inputSelect(lineInput);
+  sgtl5000_1.volume(VolMain_val / 100);
+  firstBeatWaveform.frequency(880);
+  otherBeatWaveform.frequency(440);
+  firstBeatWaveform.amplitude(0.0);
+  otherBeatWaveform.amplitude(0.0);
+  firstBeatWaveform.begin(WAVEFORM_SINE);
+  otherBeatWaveform.begin(WAVEFORM_SINE);
+
+  // SD Setup
+  SPI.setMOSI(SDCARD_MOSI_PIN);
+  SPI.setSCK(SDCARD_SCK_PIN);
+  if (!(SD.begin(SDCARD_CS_PIN))) {
+    while (1) {
+      Serial.println("Unable to access the SD card");
+      delay(1000);
+    }
+  }
 }

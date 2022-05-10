@@ -1,3 +1,7 @@
+/*
+ * timing.ino - Event handlers for IntervalTimers
+ * Author: Tom Hightower - May 9, 2022
+ */
 
 void handleMetronomeInterval(void) {
   if (currentBeat == 0) {
