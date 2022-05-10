@@ -15,12 +15,18 @@ AudioRecordQueue      record_queue;
 AudioPlaySdRaw        playRaw1;
 AudioPlaySdRaw        playRaw2;
 AudioPlaySdRaw        playRaw3;
+AudioSynthWaveform    firstBeatWaveform;
+AudioSynthWaveform    otherBeatWaveform;
 AudioMixer4           audio_mixer;
+AudioMixer4           waveform_mixer;
 AudioConnection       patchCord1(i2s_in, 0, record_queue, 0);
 AudioConnection       patchCord2(playRaw1, 0, audio_mixer, 0);
 AudioConnection       patchCord3(playRaw2, 0, audio_mixer, 1);
 AudioConnection       patchCord4(playRaw3, 0, audio_mixer, 2);
-AudioConnection       patchCord5(audio_mixer, 0, i2s_out, 0);
+AudioConnection       patchCord5(firstBeatWaveform, 0, waveform_mixer, 0);
+AudioConnection       patchCord6(otherBeatWaveform, 0, waveform_mixer, 0);
+AudioConnection       patchCord7(waveform_mixer, 0, audio_mixer, 3);
+AudioConnection       patchCord8(audio_mixer, 0, i2s_out, 0);
 AudioControlSGTL5000  sgtl5000_1;
 
 const int lineInput = AUDIO_INPUT_LINEIN;
@@ -35,6 +41,21 @@ File record_file;
 const char * fileList[3] = {
   "CHA.RAW", "CHB.RAW", "CHC.RAW"
 };
+
+enum RecordingChannel {
+  NotRecording = 0,
+  ChA,
+  ChB,
+  ChC
+};
+
+RecordingChannel recordingChannel;
+
+// Timing
+IntervalTimer metronomeInterval;
+IntervalTimer loopInterval;
+
+volatile uint8_t currentBeat = 0;
 
 // Menu Setup
 enum SelectionZone {
@@ -66,14 +87,14 @@ enum PageType {
 
 enum LoopState {
   Empty = 0,
-  PreRec,
   Rec,
   Play,
-  Pause
+  Pause,
+  PreRec
 };
 
 struct LoopChannel {
-  LoopState state;
+  volatile LoopState state;
   uint8_t id;
   char name[10];
   uint8_t *vol;
@@ -220,18 +241,26 @@ uint8_t maxEditValue = 100;
 String editValueName = "";
 Page *currentPage = &MainPage1;
 
+// MAIN LOOP
 void loop() {
+  if (any_channel_recording()) try_record();
+
   check_encoder();
-  
   check_pbs();
-  
-  if(screenNeedsUpdate) {
+
+  if (screenNeedsUpdate) {
     update_display();
   }
 
   if (ledNeedsUpdate) {
     update_leds();
   }
+}
+
+bool any_channel_recording() {
+  return  Channel_A.state == LoopState::Rec ||
+          Channel_B.state == LoopState::Rec ||
+          Channel_C.state == LoopState::Rec;
 }
 
 void save_project() {
@@ -246,7 +275,7 @@ void load_projects() {
 
 void update_leds() {
   for (int i = 0; i < 3; i++) {
-    switch(channels[i]->state) {
+    switch (channels[i]->state) {
       case Empty:
         digitalWrite(*channels[i]->led, LOW); // OFF
         break;
@@ -280,16 +309,22 @@ void init_leds() {
 
 void init_audio_shield() {
   // Audio Setup
-  AudioMemory(60);
+  AudioMemory(120);
   sgtl5000_1.enable();
   sgtl5000_1.inputSelect(lineInput);
-  sgtl5000_1.volume(VolMain_val/100);
+  sgtl5000_1.volume(VolMain_val / 100);
+  firstBeatWaveform.frequency(880);
+  otherBeatWaveform.frequency(440);
+  firstBeatWaveform.amplitude(0.0);
+  otherBeatWaveform.amplitude(0.0);
+  firstBeatWaveform.begin(WAVEFORM_SINE);
+  otherBeatWaveform.begin(WAVEFORM_SINE);
 
   // SD Setup
   SPI.setMOSI(SDCARD_MOSI_PIN);
   SPI.setSCK(SDCARD_SCK_PIN);
   if (!(SD.begin(SDCARD_CS_PIN))) {
-    while(1) {
+    while (1) {
       Serial.println("Unable to access the SD card");
       delay(1000);
     }
@@ -297,25 +332,46 @@ void init_audio_shield() {
 }
 
 void init_menus() {
-  Channel_A = (struct LoopChannel){LoopState::Empty, 0, "Channel A", &VolA_val, &LED_CH_A, &playRaw1};
-  Channel_B = (struct LoopChannel){LoopState::Empty, 1, "Channel B", &VolB_val, &LED_CH_B, &playRaw2};
-  Channel_C = (struct LoopChannel){LoopState::Empty, 2, "Channel C", &VolC_val, &LED_CH_C, &playRaw3};
-  
-  MainPage1      = (struct Page){{&main_setup, &main_mixing, &main_load}, PageType::Menu, nullptr, nullptr, &MainPage2, SelectionZone::Menu1};
-  MainPage2      = (struct Page){{&main_save, &main_clear, nullptr}, PageType::Menu, nullptr, &MainPage1, nullptr, SelectionZone::Menu1};
-  SetupPage1     = (struct Page){{&setup_tempo, &setup_timeSig, &setup_metronome}, PageType::Menu, &MainPage1, nullptr, &SetupPage2, SelectionZone::Menu1};
-  SetupPage2     = (struct Page){{&setup_loopLen, nullptr, nullptr}, PageType::Menu, &MainPage1, &SetupPage1, nullptr, SelectionZone::Menu1};
-  MixingPage1    = (struct Page){{&mixing_volMain, &mixing_volA, &mixing_volB}, PageType::Menu, &MainPage1, nullptr, &MixingPage2, SelectionZone::Menu1};
-  MixingPage2    = (struct Page){{&mixing_volC, nullptr, nullptr}, PageType::Menu, &MainPage1, &MixingPage1, nullptr, SelectionZone::Menu1};
-  LoadListPage   = (struct Page){{nullptr, nullptr, nullptr},        PageType::DynamicMenu, &MainPage1,    nullptr, nullptr, SelectionZone::Menu1};
-  LoadActionPage = (struct Page){{&load_load, &load_delete, nullptr}, PageType::Menu,       &LoadListPage, nullptr, nullptr, SelectionZone::Menu1};
-  SaveAsPage     = (struct Page){{nullptr, nullptr, nullptr},         PageType::ValText,    &MainPage1,    nullptr, nullptr, SelectionZone::Save1};
-  ConfirmPage    = (struct Page){{nullptr, nullptr, nullptr},         PageType::ValConfirm,  EditBackPage, nullptr, nullptr, SelectionZone::Confirm};
-  NumericPage    = (struct Page){{nullptr, nullptr, nullptr},         PageType::ValNumeric,  EditBackPage, nullptr, nullptr, SelectionZone::None};
-  TogglePage     = (struct Page){{nullptr, nullptr, nullptr},         PageType::ValToggle,   EditBackPage, nullptr, nullptr, SelectionZone::Confirm};
-  TimeSigPage    = (struct Page){{nullptr, nullptr, nullptr},         PageType::ValTimeSig,  EditBackPage, nullptr, nullptr, SelectionZone::TimeSig1};
+  Channel_A = (struct LoopChannel) {
+    LoopState::Empty, 0, "Channel A", &VolA_val, &LED_CH_A, &playRaw1
+  };
+  Channel_B = (struct LoopChannel) {
+    LoopState::Empty, 1, "Channel B", &VolB_val, &LED_CH_B, &playRaw2
+  };
+  Channel_C = (struct LoopChannel) {
+    LoopState::Empty, 2, "Channel C", &VolC_val, &LED_CH_C, &playRaw3
+  };
+
+  MainPage1      = (struct Page) { {&main_setup, &main_mixing, &main_load}, PageType::Menu, nullptr, nullptr, &MainPage2, SelectionZone::Menu1
+  };
+  MainPage2      = (struct Page) { {&main_save, &main_clear, nullptr}, PageType::Menu, nullptr, &MainPage1, nullptr, SelectionZone::Menu1
+  };
+  SetupPage1     = (struct Page) { {&setup_tempo, &setup_timeSig, &setup_metronome}, PageType::Menu, &MainPage1, nullptr, &SetupPage2, SelectionZone::Menu1
+  };
+  SetupPage2     = (struct Page) { {&setup_loopLen, nullptr, nullptr}, PageType::Menu, &MainPage1, &SetupPage1, nullptr, SelectionZone::Menu1
+  };
+  MixingPage1    = (struct Page) { {&mixing_volMain, &mixing_volA, &mixing_volB}, PageType::Menu, &MainPage1, nullptr, &MixingPage2, SelectionZone::Menu1
+  };
+  MixingPage2    = (struct Page) { {&mixing_volC, nullptr, nullptr}, PageType::Menu, &MainPage1, &MixingPage1, nullptr, SelectionZone::Menu1
+  };
+  LoadListPage   = (struct Page) { {nullptr, nullptr, nullptr},        PageType::DynamicMenu, &MainPage1,    nullptr, nullptr, SelectionZone::Menu1
+  };
+  LoadActionPage = (struct Page) { {&load_load, &load_delete, nullptr}, PageType::Menu,       &LoadListPage, nullptr, nullptr, SelectionZone::Menu1
+  };
+  SaveAsPage     = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValText,    &MainPage1,    nullptr, nullptr, SelectionZone::Save1
+  };
+  ConfirmPage    = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValConfirm,  EditBackPage, nullptr, nullptr, SelectionZone::Confirm
+  };
+  NumericPage    = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValNumeric,  EditBackPage, nullptr, nullptr, SelectionZone::None
+  };
+  TogglePage     = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValToggle,   EditBackPage, nullptr, nullptr, SelectionZone::Confirm
+  };
+  TimeSigPage    = (struct Page) { {nullptr, nullptr, nullptr},         PageType::ValTimeSig,  EditBackPage, nullptr, nullptr, SelectionZone::TimeSig1
+  };
 
   channels[0] = &Channel_A;
   channels[1] = &Channel_B;
   channels[2] = &Channel_C;
+  
+  recordingChannel = RecordingChannel::NotRecording;
 }

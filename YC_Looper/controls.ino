@@ -104,9 +104,9 @@ void check_pbs() {
   if (chA_Button.update()) {
     if (chA_Button.fallingEdge()) {
       pressTimeA = millis();
-      if (Channel_A.state < 4) {
+      if (Channel_A.state < 3) {
         Channel_A.state = static_cast<LoopState>(Channel_A.state + 1);
-      } else {
+      } else if (Channel_A.state == 3) {
         Channel_A.state = LoopState::Play;
       }
     }
@@ -120,9 +120,9 @@ void check_pbs() {
   if (chB_Button.update()) {
     if (chB_Button.fallingEdge()) {
       pressTimeB = millis();
-      if (Channel_B.state < 4) {
+      if (Channel_B.state < 3) {
         Channel_B.state = static_cast<LoopState>(Channel_B.state + 1);
-      } else {
+      } else if (Channel_B.state == 3) {
         Channel_B.state = LoopState::Play;
       }
     }
@@ -136,9 +136,9 @@ void check_pbs() {
   if (chC_Button.update()) {
     if (chC_Button.fallingEdge()) {
       pressTimeC = millis();
-      if (Channel_C.state < 4) {
+      if (Channel_C.state < 3) {
         Channel_C.state = static_cast<LoopState>(Channel_C.state + 1);
-      } else {
+      } else if (Channel_C.state == 3) {
         Channel_C.state = LoopState::Play;
       }
     }
