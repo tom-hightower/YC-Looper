@@ -1,9 +1,18 @@
 /*
- * menus.ino - Methods for navigation and page handling
+ * menus.ino - Methods for navigation and file operations
  * Author: Tom Hightower - May 10, 2022
  */
-
  
+void save_project() {
+  //TODO
+  SaveName_val = "0000";
+  display_go_back();
+}
+
+void load_projects() {
+  //TODO
+}
+
 void init_menus() {
   Channel_A = (struct LoopChannel) {
     LoopState::Empty, 0, "Channel A", &VolA_val, &LED_CH_A, &playRaw1
@@ -66,4 +75,12 @@ void init_menus() {
   channels[2] = &Channel_C;
   
   recordingChannel = RecordingChannel::NotRecording;
+}
+
+void display_go_back() {
+  if (currentPage->back != nullptr) {
+    currentPage = currentPage->back;
+    selectionZone = currentPage->defaultZone;
+    screenNeedsUpdate = true;
+  }
 }

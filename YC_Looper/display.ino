@@ -230,41 +230,6 @@ void display_selectArea() {
   
 }
 
-void display_go_back() {
-  if (currentPage->back != nullptr) {
-    currentPage = currentPage->back;
-    selectionZone = currentPage->defaultZone;
-    screenNeedsUpdate = true;
-  }
-}
-
-
-String get_value_for_menuItem(MenuItem *item) {
-  switch (item->valueType) {
-    case Tempo:
-      return String(Tempo_val);
-    case TimeSig:
-      char strBuf[3];
-      sprintf(strBuf, "%d:%d", TimeSig_val.top, TimeSig_val.bottom);
-      return String(strBuf);
-    case Metronome:
-      return Metronome_val ? "On" : "Off";
-    case LoopLen:
-      return String(LoopLen_val);
-    case VolMain:
-      return String(VolMain_val);
-    case VolA:
-      return String(VolA_val);
-    case VolB:
-      return String(VolB_val);
-    case VolC:
-      return String(VolC_val);
-    default:
-      break;
-  }
-  return "";
-}
-
 void init_display() {
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   delay(100);
