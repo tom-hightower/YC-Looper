@@ -43,6 +43,17 @@ IntervalTimer metronomeInterval;
 IntervalTimer loopInterval;
 
 volatile uint8_t currentBeat = 0;
+volatile bool triggerMet = false;
+unsigned long metronomeUS = 500000;
+unsigned long loopUS = 16000000;
+
+enum TimerState {
+  NoTimer = 0,
+  OnlyMet,
+  Both
+};
+
+volatile TimerState timerState = TimerState::NoTimer;
 
 // Menu Setup
 enum SelectionZone {

@@ -7,7 +7,7 @@ void check_encoder() {
   long newKnobPos = (long)(knob.read() / 4);
   if (newKnobPos != knobPosition) {
     bool knobRight = newKnobPos < knobPosition;
-    switch(currentPage->type) {
+    switch (currentPage->type) {
       case Menu:
         if (knobRight && selectionZone < 3) {
           selectionZone = static_cast<SelectionZone>(selectionZone + 1);
@@ -94,7 +94,7 @@ void check_encoder() {
     Serial.print("Knob = ");
     Serial.print(knobPosition);
     Serial.println();
-  } 
+  }
 }
 
 unsigned long pressTimeA = 0;
@@ -107,50 +107,26 @@ unsigned long releaseTimeC = 0;
 void check_pbs() {
   if (chA_Button.update()) {
     if (chA_Button.fallingEdge()) {
-      pressTimeA = millis();
-      if (Channel_A.state < 3) {
-        Channel_A.state = static_cast<LoopState>(Channel_A.state + 1);
-      } else if (Channel_A.state == 3) {
-        Channel_A.state = LoopState::Play;
-      }
+      channel_pb_press(0, &pressTimeA);
     }
     if (chA_Button.risingEdge()) {
-      releaseTimeA = millis();
-      if ((releaseTimeA - pressTimeA) > 2000) {
-        Channel_A.state = LoopState::Empty;
-      }
+      channel_pb_release(0, &pressTimeA, &releaseTimeA);
     }
   }
   if (chB_Button.update()) {
     if (chB_Button.fallingEdge()) {
-      pressTimeB = millis();
-      if (Channel_B.state < 3) {
-        Channel_B.state = static_cast<LoopState>(Channel_B.state + 1);
-      } else if (Channel_B.state == 3) {
-        Channel_B.state = LoopState::Play;
-      }
+      channel_pb_press(1, &pressTimeB);
     }
     if (chB_Button.risingEdge()) {
-      releaseTimeB = millis();
-      if ((releaseTimeB - pressTimeB) > 2000) {
-        Channel_B.state = LoopState::Empty;
-      }
+      channel_pb_release(1, &pressTimeB, &releaseTimeB);
     }
   }
   if (chC_Button.update()) {
     if (chC_Button.fallingEdge()) {
-      pressTimeC = millis();
-      if (Channel_C.state < 3) {
-        Channel_C.state = static_cast<LoopState>(Channel_C.state + 1);
-      } else if (Channel_C.state == 3) {
-        Channel_C.state = LoopState::Play;
-      }
+      channel_pb_press(2, &pressTimeC);
     }
     if (chC_Button.risingEdge()) {
-      releaseTimeC = millis();
-      if ((releaseTimeC - pressTimeC) > 2000) {
-        Channel_C.state = LoopState::Empty;
-      }
+      channel_pb_release(2, &pressTimeC, &releaseTimeC);
     }
   }
   if (backButton.update()) {
@@ -160,10 +136,10 @@ void check_pbs() {
   }
   if (enterButton.update()) {
     if (enterButton.fallingEdge()) {
-      switch(currentPage->type) {
+      switch (currentPage->type) {
         case Menu:
-          if (currentPage->items[selectionZone-1] != nullptr) {
-            switch(currentPage->items[selectionZone-1]->valueType) {
+          if (currentPage->items[selectionZone - 1] != nullptr) {
+            switch (currentPage->items[selectionZone - 1]->valueType) {
               case Tempo:
                 editValue = &Tempo_val;
                 break;
@@ -185,9 +161,9 @@ void check_pbs() {
               default:
                 break;
             }
-            maxEditValue = currentPage->items[selectionZone-1]->maxValue;
-            editValueName = currentPage->items[selectionZone-1]->name;
-            currentPage = currentPage->items[selectionZone-1]->next;
+            maxEditValue = currentPage->items[selectionZone - 1]->maxValue;
+            editValueName = currentPage->items[selectionZone - 1]->name;
+            currentPage = currentPage->items[selectionZone - 1]->next;
             selectionZone = currentPage->defaultZone;
             screenNeedsUpdate = true;
           }
@@ -211,10 +187,43 @@ void check_pbs() {
   }
 }
 
+void channel_pb_press(int channel, unsigned long *pressTime) {
+  *pressTime = millis();
+  switch(channels[channel]->state) {
+    case Empty:
+      change_channel_state_safe(channel, LoopState::PreRec);
+      break;
+    case Rec:
+    case Play:
+      change_channel_state_safe(channel, static_cast<LoopState>(channels[channel]->state + 1));
+      break;
+    case Pause:
+      change_channel_state_safe(channel, LoopState::Play);
+      break;
+    default:
+      break;
+  }
+  Serial.print("Button pressed: ");
+  Serial.println(channel);
+  if (channels[channel]->state == LoopState::PreRec && timerState == TimerState::NoTimer) {
+    begin_timer(true);
+    noInterrupts();
+    timerState = TimerState::OnlyMet;
+    interrupts();
+  }
+}
+
+void channel_pb_release(int channel, unsigned long *pressTime, unsigned long *releaseTime) {
+  *releaseTime = millis();
+  if ((*releaseTime - *pressTime) > 2000) {
+    change_channel_state_safe(channel, LoopState::Empty);
+  }
+}
+
 void init_pbs() {
   pinMode(PB_CH_A, INPUT_PULLUP);
   pinMode(PB_CH_B, INPUT_PULLUP);
   pinMode(PB_CH_C, INPUT_PULLUP);
   pinMode(PB_BACK, INPUT_PULLUP);
-  pinMode(RE_SW,   INPUT_PULLUP);
+  pinMode(RE_SW, INPUT_PULLUP);
 }

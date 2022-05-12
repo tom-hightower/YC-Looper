@@ -18,12 +18,14 @@ void setup() {
   init_pbs();
   init_audio_shield();
   init_menus();
+  init_timers();
 }
 
 // MAIN LOOP
 void loop() {
   if (any_channel_recording()) try_record();
 
+  check_metronome();
   check_encoder();
   check_pbs();
 

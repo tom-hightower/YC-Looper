@@ -14,7 +14,7 @@ void update_display() {
     freshStart = false;
   } else {
     display_main_bg();
-    switch(currentPage->type) {
+    switch (currentPage->type) {
       case Menu:
         display_menu_bg();
         display_menu_items();
@@ -56,19 +56,19 @@ void display_numeric_page() {
   }
   display.print(*editValue);
   display.setTextSize(1);
-  display.setCursor(32,54);
+  display.setCursor(32, 54);
   display.print(editValueName);
 }
 
 void display_toggle_page() {
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(12,24);
+  display.setCursor(12, 24);
   display.print(editValueName);
   display.drawRect(16, 48, 32, 16, SSD1306_WHITE); // On
   display.drawRect(80, 48, 32, 16, SSD1306_WHITE); // Off
   display.setTextSize(1);
-  display.setCursor(22,52);
+  display.setCursor(22, 52);
   display.print("On");
   display.setCursor(88, 52);
   display.print("Off");
@@ -83,19 +83,19 @@ void display_timeSig_page() {
   display.setCursor(78, 28);
   display.print(TimeSig_val.bottom);
   display.setTextSize(1);
-  display.setCursor(26,54);
+  display.setCursor(26, 54);
   display.print("Time Signature");
 }
 
 void display_confirm_page() {
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(18,24);
+  display.setCursor(18, 24);
   display.print("Confirm?");
   display.drawRect(16, 48, 32, 16, SSD1306_WHITE); // Confirm
   display.drawRect(80, 48, 32, 16, SSD1306_WHITE); // Cancel
   display.setTextSize(1);
-  display.setCursor(22,52);
+  display.setCursor(22, 52);
   display.print("yes");
   display.setCursor(88, 52);
   display.print("no");
@@ -133,7 +133,7 @@ void display_splash_screen() {
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
   display.print("YC");
-  display.setCursor(0,32);
+  display.setCursor(0, 32);
   display.print("LOOP");
   display.setTextSize(2);
   display.setCursor(72, 12);
@@ -141,10 +141,10 @@ void display_splash_screen() {
 }
 
 void display_main_bg() {
-  display.drawRect(1,0,display.width()-2, 16, SSD1306_WHITE);
+  display.drawRect(1, 0, display.width() - 2, 16, SSD1306_WHITE);
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(6,4);
+  display.setCursor(6, 4);
   display.print("YC Looper v1.0");
 }
 
@@ -169,7 +169,7 @@ void display_draw_topArc(int16_t x0, int16_t y0, int16_t r, uint16_t color) {
     x++;
     ddF_x += 2;
     f += ddF_x;
-    
+
     display.drawPixel(x0 + x, y0 - y, color);
     display.drawPixel(x0 + y, y0 - x, color);
     display.drawPixel(x0 - y, y0 - x, color);
@@ -179,7 +179,7 @@ void display_draw_topArc(int16_t x0, int16_t y0, int16_t r, uint16_t color) {
 
 void display_selectArea() {
   int selIdx = selectionZone - 6;
-  switch(selectionZone) {
+  switch (selectionZone) {
     case None:
       break;
     case Menu1:
@@ -227,7 +227,7 @@ void display_selectArea() {
     default:
       break;
   }
-  
+
 }
 
 void init_display() {
