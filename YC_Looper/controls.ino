@@ -24,6 +24,16 @@ void check_encoder() {
         }
         screenNeedsUpdate = true;
         break;
+      case DynamicMenu:
+        if (knobRight && currentProject < 8) {
+          currentProject++;
+        } else if (!knobRight && currentProject > 0) {
+          currentProject--;
+        } else {
+          break;
+        }
+        screenNeedsUpdate = true;
+        break;
       case ValToggle:
         if (knobRight) {
           selectionZone = SelectionZone::Cancel;
@@ -91,9 +101,6 @@ void check_encoder() {
         break;
     }
     knobPosition = newKnobPos;
-    Serial.print("Knob = ");
-    Serial.print(knobPosition);
-    Serial.println();
   }
 }
 
@@ -136,54 +143,64 @@ void check_pbs() {
   }
   if (enterButton.update()) {
     if (enterButton.fallingEdge()) {
-      switch (currentPage->type) {
-        case Menu:
-          if (currentPage->items[selectionZone - 1] != nullptr) {
-            switch (currentPage->items[selectionZone - 1]->valueType) {
-              case Tempo:
-                editValue = &Tempo_val;
-                break;
-              case LoopLen:
-                editValue = &LoopLen_val;
-                break;
-              case VolMain:
-                editValue = &VolMain_val;
-                break;
-              case VolA:
-                editValue = &VolA_val;
-                break;
-              case VolB:
-                editValue = &VolB_val;
-                break;
-              case VolC:
-                editValue = &VolC_val;
-                break;
-              default:
-                break;
-            }
-            maxEditValue = currentPage->items[selectionZone - 1]->maxValue;
-            editValueName = currentPage->items[selectionZone - 1]->name;
-            currentPage = currentPage->items[selectionZone - 1]->next;
-            selectionZone = currentPage->defaultZone;
-            screenNeedsUpdate = true;
-          }
-          break;
-        case ValToggle:
-          display_go_back();
-          break;
-        case ValTimeSig:
-        case ValText:
-          if (selectionZone == SelectionZone::SaveConfirm) {
-            save_project();
-          } else {
-            textEdit = !textEdit;
-          }
-          screenNeedsUpdate = true;
-          break;
-        default:
-          break;
-      }
+      enter_pb_press();
     }
+  }
+}
+
+void enter_pb_press() {
+  switch (currentPage->type) {
+    case Menu:
+      if (currentPage->items[selectionZone - 1] != nullptr) {
+        switch (currentPage->items[selectionZone - 1]->valueType) {
+          case Tempo:
+            editValue = &Tempo_val;
+            break;
+          case LoopLen:
+            editValue = &LoopLen_val;
+            break;
+          case VolMain:
+            editValue = &VolMain_val;
+            break;
+          case VolA:
+            editValue = &VolA_val;
+            break;
+          case VolB:
+            editValue = &VolB_val;
+            break;
+          case VolC:
+            editValue = &VolC_val;
+            break;
+          default:
+            break;
+        }
+        maxEditValue = currentPage->items[selectionZone - 1]->maxValue;
+        editValueName = currentPage->items[selectionZone - 1]->name;
+        currentPage = currentPage->items[selectionZone - 1]->next;
+        selectionZone = currentPage->defaultZone;
+        screenNeedsUpdate = true;
+      }
+      break;
+    case DynamicMenu:
+      if (!projects[currentProject].name) break;
+      currentPage = &LoadActionPage;
+      selectionZone = currentPage->defaultZone;
+      screenNeedsUpdate = true;
+      break;
+    case ValToggle:
+      display_go_back();
+      break;
+    case ValTimeSig:
+    case ValText:
+      if (selectionZone == SelectionZone::SaveConfirm) {
+        save_project();
+      } else {
+        textEdit = !textEdit;
+      }
+      screenNeedsUpdate = true;
+      break;
+    default:
+      break;
   }
 }
 
@@ -193,18 +210,17 @@ void channel_pb_press(int channel, unsigned long *pressTime) {
     case Empty:
       change_channel_state_safe(channel, LoopState::PreRec);
       break;
-    case Rec:
     case Play:
+      stopPlaying(channel);
       change_channel_state_safe(channel, static_cast<LoopState>(channels[channel]->state + 1));
       break;
+    case Rec:
     case Pause:
       change_channel_state_safe(channel, LoopState::Play);
       break;
     default:
       break;
   }
-  Serial.print("Button pressed: ");
-  Serial.println(channel);
   if (channels[channel]->state == LoopState::PreRec && timerState == TimerState::NoTimer) {
     begin_timer(true);
     noInterrupts();
@@ -216,6 +232,11 @@ void channel_pb_press(int channel, unsigned long *pressTime) {
 void channel_pb_release(int channel, unsigned long *pressTime, unsigned long *releaseTime) {
   *releaseTime = millis();
   if ((*releaseTime - *pressTime) > 2000) {
+    if (recordingChannel == channel + 1) {
+      stopRecording();
+    } else {
+      stopPlaying(channel);
+    }
     change_channel_state_safe(channel, LoopState::Empty);
   }
 }

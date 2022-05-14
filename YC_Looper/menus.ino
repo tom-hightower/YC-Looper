@@ -11,6 +11,23 @@ void save_project() {
 
 void load_projects() {
   //TODO
+  File root = SD.open("/");
+  for (int i = 0; i < 9; i++) {
+    File entry = root.openNextFile();
+    if (!entry) break;
+    if (!entry.isDirectory()) continue;
+    String cur_name = entry.name();
+    bool enabled[3] = {false, false, false};
+    while (true) {
+      File sub_entry = entry.openNextFile();
+      if (!sub_entry) break;
+      if (sub_entry.isDirectory()) continue;
+      if (strcmp(sub_entry.name(), defaultFileList[0])) enabled[0] = true;
+      if (strcmp(sub_entry.name(), defaultFileList[1])) enabled[1] = true;
+      if (strcmp(sub_entry.name(), defaultFileList[2])) enabled[2] = true;
+    }
+    projects[i] = (struct Project) {cur_name, {enabled[0], enabled[1], enabled[2]}};
+  }
 }
 
 void init_menus() {

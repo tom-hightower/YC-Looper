@@ -19,9 +19,12 @@ void try_record() {
         break;
       case Play:
         if (recordingChannel == i + 1) {
+          Serial.print("switch rec to play channel: ");
+          Serial.println(recordingChannel-1);
           stopRecording();
           startPlaying(i);
           recordingChannel = RecordingChannel::NotRecording;
+          change_channel_state_safe(i, LoopState::Play);
         }
         break;
       default:
@@ -47,13 +50,15 @@ void stopPlaying(int channel) {
 }
 
 void startRecording(int channel) {
+  AudioNoInterrupts();
   if (SD.exists(fileList[channel])) {
     SD.remove(fileList[channel]);
   }
-  record_file = SD.open(fileList[channel]);
+  record_file = SD.open(fileList[channel], FILE_WRITE);
   if (record_file) {
     record_queue.begin();
   }
+  AudioInterrupts();
 }
 
 void continueRecording() {
@@ -77,7 +82,7 @@ void stopRecording() {
 }
 
 void check_metronome() {
-  if (triggerMet && currentBeat == 0) {
+  if (triggerMet && currentBeat == 1) {
     firstBeatWaveform.amplitude(0.15);
     delay(100);
     firstBeatWaveform.amplitude(0.0);

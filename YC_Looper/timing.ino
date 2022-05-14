@@ -4,8 +4,12 @@
  */
 
 void handleMetronomeInterval() {
-  Serial.print("Metronome fire at beat: ");
-  Serial.println(currentBeat);
+  Serial.print("met beat: ");
+  Serial.print(currentBeat);
+  Serial.print(", Ch A state: ");
+  Serial.print(channels[0]->state);
+  Serial.print(", Timer state: ");
+  Serial.println(timerState);
   if (currentBeat == TimeSig_val.top - 1) {
     currentBeat = 0;
     if (timerState == TimerState::OnlyMet) {
@@ -20,15 +24,14 @@ void handleMetronomeInterval() {
 }
 
 void handleLoopInterval() {
+  Serial.println("handle loop");
   for (int i = 0; i < 3; i++) {
     switch (channels[i]->state) {
       case PreRec:
         channels[i]->state = LoopState::Rec;
         break;
       case Play:
-        if (!channels[i]->playRaw->isPlaying()) {
-          startPlaying(i);
-        }
+        startPlaying(i);
         break;
       case Rec:
         channels[i]->state = LoopState::Play;
@@ -52,17 +55,9 @@ void stop_timers() {
 
 void begin_timer(bool met) {
   unsigned long beat = 60000000 / Tempo_val;
-  Serial.print("Tempo: ");
-  Serial.print(Tempo_val);
-  Serial.print(", Beat: ");
-  Serial.print(60/Tempo_val);
-  Serial.print(", converted is: ");
-  Serial.println(beat);
   if (met && timerState == TimerState::NoTimer) {
-    Serial.println("beginning timer for: metronome");
     metronomeInterval.begin(handleMetronomeInterval, beat);
   } else if (met) {
-    Serial.println("beginning timer for: metronome 2");
     metronomeInterval.end();
     metronomeInterval.begin(handleMetronomeInterval, beat);
   } else if (timerState != TimerState::Both) {

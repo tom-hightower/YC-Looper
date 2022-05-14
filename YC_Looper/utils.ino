@@ -6,7 +6,8 @@
 bool any_channel_recording() {
   return  Channel_A.state == LoopState::Rec ||
           Channel_B.state == LoopState::Rec ||
-          Channel_C.state == LoopState::Rec;
+          Channel_C.state == LoopState::Rec ||
+          recordingChannel != RecordingChannel::NotRecording;
 }
 
 String get_value_for_menuItem(MenuItem *item) {

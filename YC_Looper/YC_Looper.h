@@ -85,10 +85,10 @@ enum PageType {
 
 enum LoopState {
   Empty = 0,
-  Rec,
-  Play,
-  Pause,
-  PreRec
+  Rec,   // 1
+  Play,  // 2
+  Pause, // 3
+  PreRec // 4
 };
 
 struct LoopChannel {
@@ -218,8 +218,23 @@ Bounce chA_Button  = Bounce(PB_CH_A, 10);
 Bounce chB_Button  = Bounce(PB_CH_B, 10);
 Bounce chC_Button  = Bounce(PB_CH_C, 10);
 
-const char * fileList[3] = {
+// File/project setup
+struct Project {
+  String name;
+  bool enabled[3];
+};
+
+struct Project projects[9];
+uint8_t currentProject = 0;
+
+const char * defaultFileList[3] = {
   "CHA.RAW", "CHB.RAW", "CHC.RAW"
+};
+
+const char * fileList[3] = {
+  defaultFileList[0],
+  defaultFileList[1],
+  defaultFileList[2]
 };
 
 long knobPosition = -999;

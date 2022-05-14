@@ -19,6 +19,11 @@ void update_display() {
         display_menu_bg();
         display_menu_items();
         break;
+      case DynamicMenu:
+        load_projects();
+        display_menu_bg();
+        display_dynamic_menu();
+        break;
       case ValConfirm:
         display_confirm_page();
         break;
@@ -42,7 +47,6 @@ void update_display() {
     screenNeedsUpdate = false;
   }
 }
-
 
 void display_numeric_page() {
   display_draw_topArc(64, 52, 34, SSD1306_WHITE);
@@ -124,6 +128,17 @@ void display_menu_items() {
       display.print(currentPage->items[i]->name);
       display.setCursor(100, 20 + (16 * i));
       display.print(get_value_for_menuItem(currentPage->items[i]));
+    }
+  }
+}
+
+void display_dynamic_menu() {
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  for (int i = 0; i < 3; i++) {
+    if (projects[currentProject+i].name) {
+      display.setCursor(5, 20 + (16 * i));
+      display.print(projects[currentProject+i].name);
     }
   }
 }
